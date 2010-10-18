@@ -9,9 +9,11 @@
 
 #include "ofMain.h"
 
+#include "ofxThread.h"
+
 // ofxCLeye driver
 
-class ofxCLeye : public ofVideoGrabber
+class ofxCLeye : public ofVideoGrabber, public ofxThread
 {
 	public:
 		ofxCLeye();
@@ -19,7 +21,7 @@ class ofxCLeye : public ofVideoGrabber
 		void 			listDevices();
 		void			grabFrame();
 		void			close();
-		bool			initGrabber(int w, int h, bool bTexture = true);
+		bool			initGrabber(int w, int h, bool useTexture = true, bool useThread = true);
 		void			videoSettings();
 		void			setDeviceGUID(GUID _deviceGUID);
 		void			update();
@@ -36,11 +38,14 @@ class ofxCLeye : public ofVideoGrabber
 		bool			getAutoExposure() { return autoExposure; };
 		bool			getAutoGain() { return autoGain; };
 
+		void			threadedFunction();
 
 
 		CLEyeCameraColorMode	colourMode;
 
 	protected:
+		bool					bUseThread;
+
 		CLEyeCameraInstance		_cam;
 		CLEyeCameraResolution	_resolution;
 

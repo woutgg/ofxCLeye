@@ -7,7 +7,7 @@
 ofxCLeye::ofxCLeye() :
 ofVideoGrabber()
 {
-	colourMode = CLEYE_MONO_RAW;
+	colourMode = CLEYE_MONO_PROCESSED;
 	attemptFramerate = 60;
 	gain = 20;
 	exposure = 511;
@@ -43,10 +43,17 @@ void ofxCLeye::grabFrame()
 	{
 		bIsFrameNew = false;
 
-		// currently we run this function with the default
-		// 2 second timeout..
-		// can we detect a timeout and reboot the camera?
-		if (CLEyeCameraGetFrame(_cam, (PBYTE) viPixels)){
+		bool success;
+
+		if (bUseThread)
+			//presume we've already got a frame
+			success = true;
+		else
+			//get a frame
+			success = CLEyeCameraGetFrame(_cam, (PBYTE) viPixels);
+
+		
+		if (success){
 
 			bIsFrameNew = true;
 
@@ -103,6 +110,10 @@ void ofxCLeye::close()
 {
 	if (bGrabberInited)
 	{
+		
+		if (bUseThread)
+			stopThread();
+
 		// Stop camera capture
 		CLEyeCameraStop(_cam);
 		// Destroy camera object
@@ -115,9 +126,10 @@ void ofxCLeye::close()
 	bGrabberInited = false;
 }
 
-bool ofxCLeye::initGrabber(int w, int h, bool bTexture)
+bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool useThread)
 {
-	bUseTexture = bTexture;
+	bUseTexture = useTexture;
+	bUseThread = useThread;
 
 
 	if (bChooseDevice){
@@ -203,6 +215,9 @@ bool ofxCLeye::initGrabber(int w, int h, bool bTexture)
 			tex.loadData(pixels, width, height, GL_LUMINANCE);
 		}
 
+		if (bUseThread)
+			startThread(true, false);
+
 		ofLog(OF_LOG_NOTICE, "ofxCLeye created camera successfully");
 		return true;
 	} else {
@@ -281,4 +296,14 @@ void ofxCLeye::setAutoGain(bool _autoGain)
 
 	if (bGrabberInited)
 		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN, autoGain);
+}
+
+void ofxCLeye::threadedFunction()
+{
+	while (isThreadRunning())
+		if (lock())
+		{
+			CLEyeCameraGetFrame(_cam, (PBYTE) viPixels);
+			unlock();
+		}
 }
