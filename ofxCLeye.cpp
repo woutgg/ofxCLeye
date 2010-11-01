@@ -47,7 +47,7 @@ void ofxCLeye::grabFrame()
 
 		if (bUseThread)
 			//presume we've already got a frame
-			success = true;
+			success = lock();
 		else
 			//get a frame
 			success = CLEyeCameraGetFrame(_cam, (PBYTE) viPixels);
@@ -101,6 +101,8 @@ void ofxCLeye::grabFrame()
 			if (bUseTexture){
 				tex.loadData(pixels, width, height, GL_LUMINANCE);
 			}
+
+			unlock();
 
 		}
 	}
