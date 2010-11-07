@@ -263,6 +263,8 @@ void ofxCLeye::setExposure(int _exposure)
 
 	if (bGrabberInited)
 		CLEyeSetCameraParameter(_cam, CLEYE_EXPOSURE, exposure);
+	else
+		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 
 }
 
@@ -272,6 +274,8 @@ void ofxCLeye::setGain(int _gain)
 
 	if (bGrabberInited)
 		CLEyeSetCameraParameter(_cam, CLEYE_GAIN, gain);
+	else
+		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 
 
 }
@@ -282,6 +286,8 @@ void ofxCLeye::setLED(bool _led)
 
 	if (bGrabberInited)
 		CLEyeCameraLED(_cam, led);
+	else
+		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
 
 void ofxCLeye::setAutoExposure(bool _autoExposure)
@@ -289,7 +295,9 @@ void ofxCLeye::setAutoExposure(bool _autoExposure)
 	autoExposure = _autoExposure;
 
 	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_EXPOSURE, autoExposure);
+		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_EXPOSURE, (autoExposure? 1 : 0));
+	else
+		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
 
 void ofxCLeye::setAutoGain(bool _autoGain)
@@ -297,7 +305,9 @@ void ofxCLeye::setAutoGain(bool _autoGain)
 	autoGain = _autoGain;
 
 	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN, autoGain);
+		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN,  (autoGain? 1 : 0));
+	else
+		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
 
 void ofxCLeye::threadedFunction()
