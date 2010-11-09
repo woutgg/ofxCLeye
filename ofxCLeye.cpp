@@ -180,6 +180,17 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool useThread)
 	int ourRequestedHeight = height;
 
 	if (bOk == true){
+		////////////////////////////////////////
+		// REPORT GUID
+		////////////////////////////////////////
+		char guidmsg[150];
+		sprintf(guidmsg, "ofxCLeye: Camera GUID: [%08x-%04x-%04x-v%02x%02x-%02x%02x%02x%02x%02x%02x]\n", 
+				guid.Data1, guid.Data2, guid.Data3,
+				guid.Data4[0], guid.Data4[1], guid.Data4[2],
+				guid.Data4[3], guid.Data4[4], guid.Data4[5],
+				guid.Data4[6], guid.Data4[7]);
+		ofLog(OF_LOG_VERBOSE, guidmsg);
+		////////////////////////////////////////
 
 		////////////////////////////////////////
 		// GAIN/EXPOSURE
