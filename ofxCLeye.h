@@ -21,7 +21,7 @@ class ofxCLeye : public ofVideoGrabber, public ofxThread
 		void 			listDevices();
 		void			grabFrame();
 		void			close();
-		bool			initGrabber(int w, int h, bool useTexture = true, bool useThread = true);
+		bool			initGrabber(int w, int h, bool useTexture = true, bool isGrey = true, bool useThread = true);
 		void			videoSettings();
 		void			setDeviceGUID(GUID _deviceGUID);
 		void			update();

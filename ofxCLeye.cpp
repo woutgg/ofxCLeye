@@ -7,7 +7,6 @@
 ofxCLeye::ofxCLeye() :
 ofVideoGrabber()
 {
-	colourMode = CLEYE_MONO_PROCESSED;
 	attemptFramerate = 60;
 	gain = 20;
 	exposure = 511;
@@ -87,19 +86,37 @@ void ofxCLeye::grabFrame()
 
 						int posPix = (((int)posy * inputW) + ((int)posx));
 
-						pixels[(j*width) + i] = viPixels[posPix];
+						if (colourMode == CLEYE_MONO_PROCESSED)
+							pixels[(j*width) + i] = viPixels[posPix];
+						else {
+							pixels[(j*width)*3 + i*3 + 0] = viPixels[posPix*4 + 0];
+							pixels[(j*width)*3 + i*3 + 1] = viPixels[posPix*4 + 1];
+							pixels[(j*width)*3 + i*3 + 2] = viPixels[posPix*4 + 2];
+						}
 
 					}
 				}
 
 			} else {
-
-				memcpy(pixels, viPixels, width*height);
-
+				
+				if (colourMode == CLEYE_MONO_PROCESSED)
+					memcpy(pixels, viPixels, width*height);
+				else
+				{
+					for (int i=0; i<width*height; i++)
+					{
+						pixels[i*3+0] = viPixels[i*4+2];
+						pixels[i*3+1] = viPixels[i*4+1];
+						pixels[i*3+2] = viPixels[i*4+0];
+					}
+				}
 			}
 
 			if (bUseTexture){
-				tex.loadData(pixels, width, height, GL_LUMINANCE);
+				if (colourMode == CLEYE_MONO_PROCESSED)
+					tex.loadData(pixels, width, height, GL_LUMINANCE);
+				else
+					tex.loadData(pixels, width, height, GL_RGB);
 			}
 
 			unlock();
@@ -128,11 +145,15 @@ void ofxCLeye::close()
 	bGrabberInited = false;
 }
 
-bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool useThread)
+bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool isGrey, bool useThread)
 {
 	bUseTexture = useTexture;
 	bUseThread = useThread;
 
+	if (isGrey)
+		colourMode = CLEYE_MONO_PROCESSED;
+	else
+		colourMode = CLEYE_COLOR_PROCESSED;
 
 	if (bChooseDevice){
 		ofLog(OF_LOG_NOTICE, "choosing %i", deviceID);
@@ -208,7 +229,7 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool useThread)
 
 		//this line should also accomodate non-colour values
 		//here we init an array at the cam's native resolution
-		viPixels= new unsigned char[width * height];
+		viPixels= new unsigned char[width * height * (isGrey ? 1 : 4)];
 
 		if (width == ourRequestedWidth && height == ourRequestedHeight){
 			bDoWeNeedToResize = false;
@@ -218,14 +239,15 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool useThread)
 			height = ourRequestedHeight;
 		}
 
-		pixels	= new unsigned char[width * height];
+		pixels	= new unsigned char[width * height * (isGrey ? 1 : 3)];
 
 		if (bUseTexture){
 			// create the texture, set the pixels to black and
 			// upload them to the texture (so at least we see nothing black the callback)
-			tex.allocate(width,height,GL_LUMINANCE);
-			memset(pixels, 0, width*height);
-			tex.loadData(pixels, width, height, GL_LUMINANCE);
+			tex.allocate(width,height,(isGrey ? GL_LUMINANCE : GL_RGB));
+
+			memset(pixels, 0, width*height * (isGrey ? 1 : 3));
+			tex.loadData(pixels, width, height, (isGrey ? GL_LUMINANCE : GL_RGB));
 		}
 
 		if (bUseThread)
