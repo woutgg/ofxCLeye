@@ -14,10 +14,14 @@ ofVideoGrabber()
 
 ofxCLeye::~ofxCLeye()
 {
-	close();
+	if (bUseThread)
+	{
+		if (lock())
+			close();
+	}
 }
 
-void ofxCLeye::listDevices()
+int ofxCLeye::listDevices()
 {
 	int numCams = CLEyeGetCameraCount();
 
@@ -34,6 +38,7 @@ void ofxCLeye::listDevices()
 				guidCam.Data4[6], guidCam.Data4[7]);
 	}
 
+	return numCams;
 }
 
 void ofxCLeye::grabFrame()
@@ -46,7 +51,7 @@ void ofxCLeye::grabFrame()
 
 		if (bUseThread)
 			//presume we've already got a frame
-			success = lock();
+			success = true;
 		else
 			//get a frame
 			success = CLEyeCameraGetFrame(_cam, (PBYTE) viPixels);
@@ -119,7 +124,8 @@ void ofxCLeye::grabFrame()
 					tex.loadData(pixels, width, height, GL_RGB);
 			}
 
-			unlock();
+			if (bUseThread)
+				unlock();
 
 		}
 	}
