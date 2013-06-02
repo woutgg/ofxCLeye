@@ -17,7 +17,7 @@ ofxCLeye::~ofxCLeye() {
 }
 
 void ofxCLeye::listDevices() {
-	int numCams = CLEyeGetCameraCount();
+	int numCams = getDeviceCount();
 
 	cout << "ofxCLeye found " << numCams << " PlayStation Eye cameras:\n";
 
@@ -34,7 +34,8 @@ void ofxCLeye::listDevices() {
 
 //static
 int ofxCLeye::getDeviceCount() {
-	return CLEyeGetCameraCount();
+	//return CLEyeGetCameraCount();
+	return 2;
 }
 
 //static
@@ -148,7 +149,7 @@ void ofxCLeye::videoSettings() {
 }
 
 void ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
-	int numCams = CLEyeGetCameraCount();
+	int numCams = getDeviceCount();
 
 	for (int i = 0; i < numCams; i++) {
 		if (CLEyeGetCameraUUID(i) == _deviceGUID) {
