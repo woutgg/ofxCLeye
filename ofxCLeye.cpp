@@ -5,7 +5,7 @@
 #include "ofxCLeye.h"
 
 ofxCLeye::ofxCLeye()
-: ofBaseVideoGrabber(), bUseThread(false), bUseTexture(true),
+: ofBaseVideoGrabber(), bUseThread(true), bUseTexture(true), colourMode(CLEYE_COLOR_PROCESSED),
   bGrabberInited(false), bChooseDevice(false), bIsFrameNew(false) {
 	attemptFramerate = 60;
 	gain = 20;
@@ -13,18 +13,16 @@ ofxCLeye::ofxCLeye()
 }
 
 ofxCLeye::~ofxCLeye() {
-	if (bUseThread) {
-		if (lock()) close();
-	}
+	close();
 }
 
 void ofxCLeye::listDevices() {
 	int numCams = CLEyeGetCameraCount();
 
-	cout << "ofxCLeye found " << numCams << "PlayStation Eye:\n";
+	cout << "ofxCLeye found " << numCams << " PlayStation Eye cameras:\n";
 
 	GUID guidCam;
-	for (int i=0; i<numCams; i++) {
+	for (int i = 0; i < numCams; i++) {
 		guidCam = CLEyeGetCameraUUID(i);
 		printf("Camera %d GUID: [%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x]\n",
 				i, guidCam.Data1, guidCam.Data2, guidCam.Data3,
@@ -34,8 +32,14 @@ void ofxCLeye::listDevices() {
 	}
 }
 
+//static
 int ofxCLeye::getDeviceCount() {
 	return CLEyeGetCameraCount();
+}
+
+//static
+GUID ofxCLeye::getDeviceGUID(int deviceID) {
+	return CLEyeGetCameraUUID(deviceID);
 }
 
 void ofxCLeye::close() {
@@ -54,13 +58,11 @@ void ofxCLeye::close() {
 	bGrabberInited = false;
 }
 
-bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool isGrey, bool useThread) {
-	bUseTexture = useTexture;
-	bUseThread = useThread;
+void ofxCLeye::setUseTexture(bool _useTexture) { bUseTexture = _useTexture; }
+void ofxCLeye::setGrayscale(bool _useGrayscale) { colourMode = (_useGrayscale) ? CLEYE_MONO_PROCESSED : CLEYE_COLOR_PROCESSED; }
+void ofxCLeye::setUseThread(bool _useThread) { bUseThread = _useThread; }
 
-	if (isGrey) colourMode = CLEYE_MONO_PROCESSED;
-	else colourMode = CLEYE_COLOR_PROCESSED;
-
+bool ofxCLeye::initGrabber(int w, int h) {
 	if (bChooseDevice) ofLog(OF_LOG_NOTICE, "choosing %i", deviceID);
 	else deviceID = 0;
 
@@ -88,6 +90,9 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool isGrey, bool useT
 	int ourRequestedWidth = width;
 	int ourRequestedHeight = height;
 
+	int numChannels = (colourMode == CLEYE_MONO_PROCESSED) ? 1 : 4;
+	int glFormat = (colourMode == CLEYE_MONO_PROCESSED) ? GL_LUMINANCE : GL_RGBA;
+
 	if (bOk == true) {
 		char guidmsg[150];
 		sprintf(guidmsg, "ofxCLeye: Camera GUID: [%08x-%04x-%04x-v%02x%02x-%02x%02x%02x%02x%02x%02x]\n",
@@ -107,7 +112,7 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool isGrey, bool useT
 
 		//this line should also accomodate non-colour values
 		//here we init an array at the cam's native resolution
-		viPixels = new unsigned char[width * height * (isGrey ? 1 : 4)];
+		viPixels = new unsigned char[width * height * numChannels];
 
 //		if (width == ourRequestedWidth && height == ourRequestedHeight) {
 //			bDoWeNeedToResize = false;
@@ -117,12 +122,12 @@ bool ofxCLeye::initGrabber(int w, int h, bool useTexture, bool isGrey, bool useT
 //			height = ourRequestedHeight;
 //		}
 
-		pixels.allocate(width, height, (isGrey) ? 1 : 4);
+		pixels.allocate(width, height, numChannels);
 		pixels.set(0);
 
 		if (bUseTexture) {
-			tex.allocate(width,height,(isGrey ? GL_LUMINANCE : GL_RGBA));
-			tex.loadData((unsigned char*)pixels.getPixels(), width, height, (isGrey ? GL_LUMINANCE : GL_RGBA));
+			tex.allocate(width, height, glFormat);
+			tex.loadData((unsigned char*)pixels.getPixels(), width, height, glFormat);
 		}
 
 		if (bUseThread) startThread(true, false);
@@ -148,6 +153,7 @@ void ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
 	for (int i = 0; i < numCams; i++) {
 		if (CLEyeGetCameraUUID(i) == _deviceGUID) {
 			deviceID = i;
+			bChooseDevice = true;
 			return;
 		}
 	}
@@ -157,58 +163,60 @@ void ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
 	bChooseDevice = false;
 }
 
-void ofxCLeye::setExposure(int _exposure)
-{
+void ofxCLeye::setExposure(int _exposure) {
 	exposure = ofClamp(_exposure, 0, 512);
 
-	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_EXPOSURE, exposure);
-	else
-		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_EXPOSURE, exposure);
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 
 }
 
-void ofxCLeye::setGain(int _gain)
-{
+void ofxCLeye::setGain(int _gain) {
 	gain = ofClamp(_gain, 0, 100);
 
-	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_GAIN, gain);
-	else
-		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_GAIN, gain);
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 
 
 }
 
-void ofxCLeye::setLED(bool _led)
-{
+void ofxCLeye::setLED(bool _led) {
 	led = _led;
 
-	if (bGrabberInited)
-		CLEyeCameraLED(_cam, led);
-	else
-		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	if (bGrabberInited) CLEyeCameraLED(_cam, led);
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
 
-void ofxCLeye::setAutoExposure(bool _autoExposure)
-{
+void ofxCLeye::setAutoExposure(bool _autoExposure) {
 	autoExposure = _autoExposure;
 
-	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_EXPOSURE, (autoExposure? 1 : 0));
-	else
-		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_AUTO_EXPOSURE, (autoExposure? 1 : 0));
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
 
-void ofxCLeye::setAutoGain(bool _autoGain)
-{
+void ofxCLeye::setAutoGain(bool _autoGain) {
 	autoGain = _autoGain;
 
-	if (bGrabberInited)
-		CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN,  (autoGain? 1 : 0));
-	else
-		ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN,  (autoGain? 1 : 0));
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
 }
+
+unsigned char* ofxCLeye::getPixels() { return pixels.getPixels(); }
+ofPixelsRef ofxCLeye::getPixelsRef() { return pixels; }
+ofTexture& ofxCLeye::getTexture() { return tex; }
+
+bool ofxCLeye::isFrameNew() { return bIsFrameNew; }
+float ofxCLeye::getWidth() { return width; }
+float ofxCLeye::getHeight() { return height; }
+
+bool ofxCLeye::setPixelFormat(ofPixelFormat fmt) {
+	return false;
+}
+
+ofPixelFormat ofxCLeye::getPixelFormat() {
+	return (colourMode == CLEYE_MONO_PROCESSED) ? OF_PIXELS_MONO : OF_PIXELS_RGBA;
+}
+
 
 void ofxCLeye::update() {
 	if (bGrabberInited == true) {

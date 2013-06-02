@@ -17,9 +17,15 @@ public:
 	ofxCLeye();
 	~ofxCLeye();
 	void			listDevices();
-	int				getDeviceCount();
+	static int		getDeviceCount();
+	static GUID		getDeviceGUID(int deviceID);
 	void			close();
-	bool			initGrabber(int w, int h, bool useTexture = true, bool isGrey = false, bool useThread = true);
+
+	void			setUseTexture(bool _useTexture);
+	void			setGrayscale(bool _useGrayscale);
+	void			setUseThread(bool _useThread);
+	bool			initGrabber(int w, int h);
+
 	void			videoSettings();
 	void			setDeviceGUID(GUID _deviceGUID);
 
@@ -35,15 +41,23 @@ public:
 	bool			getAutoExposure() { return autoExposure; };
 	bool			getAutoGain() { return autoGain; };
 
+	unsigned char*	getPixels();
+	ofPixelsRef		getPixelsRef();
+	ofTexture&		getTexture();
+
+	bool			isFrameNew();
+	float			getWidth();
+	float			getHeight();
+	bool			setPixelFormat(ofPixelFormat fmt);
+	ofPixelFormat	getPixelFormat();
+
 	void			update();
 	void			threadedFunction();
-
-
-	CLEyeCameraColorMode	colourMode;
 
 protected:
 	bool					bUseThread;
 	bool					bUseTexture;
+	CLEyeCameraColorMode	colourMode;
 	bool					bGrabberInited;
 	bool					bChooseDevice;
 	bool					bIsFrameNew;
