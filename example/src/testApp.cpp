@@ -5,32 +5,18 @@ static GUID menuCamGuid { 0xfa3b2701, 0xba88, 0x922b, { 0xa3, 0xf8, 0x99, 0x38, 
 
 //--------------------------------------------------------------
 void testApp::setup(){
-	int numDevices = ofxCLeye::getDeviceCount();
-	bool globeCamFound = false, menuCamFound = false;
-	for (int i = 0; i < numDevices; ++i) {
-		GUID currGuid = ofxCLeye::getDeviceGUID(i);
-		if (currGuid.Data1 == globeCamGuid.Data1) globeCamFound = true;
-		if (currGuid.Data1 == menuCamGuid.Data1) menuCamFound = true;
-	}
+	menuCam.listDevices();
 
-	if (numDevices < 2 || !globeCamFound || !menuCamFound) {
-		cout << "Error: less than 2 cameras found (" << numDevices << ") or missing correct GUIDs ("
-			<< (globeCamFound ? '+' : '-') << "globeCam, "
-			<< (menuCamFound ? '+' : '-') << "menuCam"
+	bool globeCamInited = ofxCLeye::initGrabberWithGUID(globeCam, globeCamGuid, 640, 480, true, false, false);
+	bool menuCamInited = ofxCLeye::initGrabberWithGUID(menuCam, menuCamGuid, 640, 480, true, false, false);
+
+	if (!globeCamInited || !menuCamInited) {
+		cout << "Error: could not initialize both cameras ("
+			<< (globeCamInited ? '+' : '-') << "globeCam, "
+			<< (menuCamInited ? '+' : '-') << "menuCam"
 			<< "), exiting with code 6." << endl;
 		::exit(6);
 	}
-
-	menuCam.listDevices();
-
-	//NOTE: threading probably fails because of concurrency issues in the library, in which case we would need a mutex on lib access
-	menuCam.setUseThread(false);
-	globeCam.setUseThread(false);
-
-	menuCam.setDeviceGUID(menuCamGuid);
-	menuCam.initGrabber(640, 480);
-	globeCam.setDeviceGUID(globeCamGuid);
-	globeCam.initGrabber(640, 480);
 }
 
 //--------------------------------------------------------------

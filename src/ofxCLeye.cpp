@@ -32,17 +32,6 @@ void ofxCLeye::listDevices() {
 	}
 }
 
-//static
-int ofxCLeye::getDeviceCount() {
-	//return CLEyeGetCameraCount();
-	return 2;
-}
-
-//static
-GUID ofxCLeye::getDeviceGUID(int deviceID) {
-	return CLEyeGetCameraUUID(deviceID);
-}
-
 void ofxCLeye::close() {
 	if (bGrabberInited) {
 		if (bUseThread) stopThread();
@@ -57,6 +46,49 @@ void ofxCLeye::close() {
 	}
 
 	bGrabberInited = false;
+}
+
+//static
+int ofxCLeye::getDeviceCount() {
+	return CLEyeGetCameraCount();
+}
+
+//static
+GUID ofxCLeye::getDeviceGUID(int deviceID) {
+	return CLEyeGetCameraUUID(deviceID);
+}
+
+//static
+int ofxCLeye::getDeviceIdByGUID(const GUID& guid) {
+	int id = -1;
+	int n = getDeviceCount();
+	for (int i = 0; i < n; i++) {
+		if (CLEyeGetCameraUUID(i) == guid) id = i;
+	}
+	return id;
+}
+
+//static
+bool ofxCLeye::initGrabberWithGUID(ofxCLeye& grabber, const GUID& guid, int w, int h,
+						bool useTexture, bool useGrayscale, bool useThread) {
+	int id = getDeviceIdByGUID(guid);
+	if (id == -1) return false;
+
+	grabber.setDeviceId(id);
+	return grabber.initGrabber(w, h);
+}
+
+//static
+ofxCLeye* ofxCLeye::createGrabberWithGUID(const GUID& guid, int w, int h,
+						bool useTexture, bool useGrayscale, bool useThread) {
+	int id = getDeviceIdByGUID(guid);
+	if (id == -1) return false;
+
+	ofxCLeye* grabber = new ofxCLeye();
+	grabber->setDeviceId(id);
+	bool rv = grabber->initGrabber(w, h);
+	if (!rv) delete grabber;
+	return rv ? grabber : NULL;
 }
 
 void ofxCLeye::setUseTexture(bool _useTexture) { bUseTexture = _useTexture; }
@@ -148,20 +180,32 @@ void ofxCLeye::videoSettings() {
 	ofLog(OF_LOG_WARNING, "ofxCLeye does not support videoSettings()");
 }
 
-void ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
-	int numCams = getDeviceCount();
+bool ofxCLeye::setDeviceId(int id) {
+	if (getDeviceCount() > id) {
+		deviceID = id;
+		bChooseDevice = true;
+		return true;
+	} else {
+		ofLog(OF_LOG_WARNING, "ofxCLeye cannot find camera with selected ID");
+		bChooseDevice = false;
+		deviceID = 0;
+		return false;
+	}
+}
 
-	for (int i = 0; i < numCams; i++) {
-		if (CLEyeGetCameraUUID(i) == _deviceGUID) {
-			deviceID = i;
-			bChooseDevice = true;
-			return;
-		}
+bool ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
+	int id = getDeviceIdByGUID(_deviceGUID);
+
+	if (id < 0) {
+		ofLog(OF_LOG_WARNING, "ofxCLeye cannot find camera with selected GUID");
+		deviceID = 0;
+		bChooseDevice = false;
+		return false;
 	}
 
-	ofLog(OF_LOG_WARNING, "ofxCLeye cannot find camera with selected GUID");
-	deviceID = 0;
-	bChooseDevice = false;
+	deviceID = id;
+	bChooseDevice = true;
+	return true;
 }
 
 void ofxCLeye::setExposure(int _exposure) {

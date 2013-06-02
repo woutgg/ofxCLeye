@@ -17,9 +17,15 @@ public:
 	ofxCLeye();
 	~ofxCLeye();
 	void			listDevices();
+	void			close();
+
 	static int		getDeviceCount();
 	static GUID		getDeviceGUID(int deviceID);
-	void			close();
+	static int		getDeviceIdByGUID(const GUID& guid);
+	static bool		initGrabberWithGUID(ofxCLeye& grabber, const GUID& guid, int w, int h,
+								bool useTexture = true, bool useGrayscale = false, bool useThread = true);
+	static ofxCLeye* createGrabberWithGUID(const GUID& guid, int w, int h,
+								bool useTexture = true, bool useGrayscale = false, bool useThread = true);
 
 	void			setUseTexture(bool _useTexture);
 	void			setGrayscale(bool _useGrayscale);
@@ -27,7 +33,9 @@ public:
 	bool			initGrabber(int w, int h);
 
 	void			videoSettings();
-	void			setDeviceGUID(GUID _deviceGUID);
+
+	bool			setDeviceId(int id);
+	bool			setDeviceGUID(GUID _deviceGUID);
 
 	void			setExposure(int _exposure);
 	void			setGain(int _gain);
