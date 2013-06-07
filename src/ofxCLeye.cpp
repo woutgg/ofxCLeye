@@ -8,8 +8,8 @@ ofxCLeye::ofxCLeye()
 : ofBaseVideoGrabber(), bUseThread(true), bUseTexture(true), colourMode(CLEYE_COLOR_PROCESSED),
   bGrabberInited(false), bChooseDevice(false), bIsFrameNew(false) {
 	attemptFramerate = 60;
-	gain = 20;
-	exposure = 511;
+	gain = 0;
+	exposure = 0;
 }
 
 ofxCLeye::~ofxCLeye() {
@@ -74,7 +74,11 @@ bool ofxCLeye::initGrabberWithGUID(ofxCLeye& grabber, const GUID& guid, int w, i
 	int id = getDeviceIdByGUID(guid);
 	if (id == -1) return false;
 
+	grabber.setUseTexture(useTexture);
+	grabber.setGrayscale(useGrayscale);
+	grabber.setUseThread(useThread);
 	grabber.setDeviceId(id);
+
 	return grabber.initGrabber(w, h);
 }
 
@@ -85,7 +89,11 @@ ofxCLeye* ofxCLeye::createGrabberWithGUID(const GUID& guid, int w, int h,
 	if (id == -1) return false;
 
 	ofxCLeye* grabber = new ofxCLeye();
+	grabber->setUseTexture(useTexture);
+	grabber->setGrayscale(useGrayscale);
+	grabber->setUseThread(useThread);
 	grabber->setDeviceId(id);
+
 	bool rv = grabber->initGrabber(w, h);
 	if (!rv) delete grabber;
 	return rv ? grabber : NULL;
@@ -123,9 +131,6 @@ bool ofxCLeye::initGrabber(int w, int h) {
 	int ourRequestedWidth = width;
 	int ourRequestedHeight = height;
 
-	int numChannels = (colourMode == CLEYE_MONO_PROCESSED) ? 1 : 4;
-	int glFormat = (colourMode == CLEYE_MONO_PROCESSED) ? GL_LUMINANCE : GL_RGBA;
-
 	if (bOk == true) {
 		char guidmsg[150];
 		sprintf(guidmsg, "ofxCLeye: Camera GUID: [%08x-%04x-%04x-v%02x%02x-%02x%02x%02x%02x%02x%02x]\n",
@@ -135,30 +140,21 @@ bool ofxCLeye::initGrabber(int w, int h) {
 				guid.Data4[6], guid.Data4[7]);
 		ofLog(OF_LOG_VERBOSE, guidmsg);
 
-		if (gain <= 0) gain = 20; //default
-		if (exposure <= 0) exposure = 511; //default
-		CLEyeSetCameraParameter(_cam, CLEYE_GAIN, gain);
-		CLEyeSetCameraParameter(_cam, CLEYE_EXPOSURE, exposure);
+		setAutoGain(true);
+		setAutoExposure(true);
 
 		CLEyeCameraGetFrameDimensions(_cam, width, height);
 		bGrabberInited = true;
 
 		//this line should also accomodate non-colour values
 		//here we init an array at the cam's native resolution
-		viPixels = new unsigned char[width * height * numChannels];
+		viPixels = new unsigned char[width * height * ((colourMode == CLEYE_MONO_PROCESSED) ? 1 : 4)];
 
-//		if (width == ourRequestedWidth && height == ourRequestedHeight) {
-//			bDoWeNeedToResize = false;
-//		} else {
-//			bDoWeNeedToResize = true;
-//			width = ourRequestedWidth;
-//			height = ourRequestedHeight;
-//		}
-
-		pixels.allocate(width, height, numChannels);
+		pixels.allocate(width, height, (colourMode == CLEYE_MONO_PROCESSED) ? 1 : 3);
 		pixels.set(0);
 
 		if (bUseTexture) {
+			int glFormat = (colourMode == CLEYE_MONO_PROCESSED) ? GL_LUMINANCE : GL_RGB;
 			tex.allocate(width, height, glFormat);
 			tex.loadData((unsigned char*)pixels.getPixels(), width, height, glFormat);
 		}
@@ -209,18 +205,18 @@ bool ofxCLeye::setDeviceGUID(GUID _deviceGUID) {
 }
 
 void ofxCLeye::setExposure(int _exposure) {
-	exposure = ofClamp(_exposure, 0, 512);
+	exposure = ofClamp(_exposure, 0, 511);
 
 	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_EXPOSURE, exposure);
-	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialised");
 
 }
 
 void ofxCLeye::setGain(int _gain) {
-	gain = ofClamp(_gain, 0, 100);
+	gain = ofClamp(_gain, 0, 79); //NOTE: 79 as per CLEyeMulticam.h
 
 	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_GAIN, gain);
-	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialised");
 
 
 }
@@ -229,21 +225,21 @@ void ofxCLeye::setLED(bool _led) {
 	led = _led;
 
 	if (bGrabberInited) CLEyeCameraLED(_cam, led);
-	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialised");
 }
 
 void ofxCLeye::setAutoExposure(bool _autoExposure) {
 	autoExposure = _autoExposure;
 
 	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_AUTO_EXPOSURE, (autoExposure? 1 : 0));
-	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialised");
 }
 
 void ofxCLeye::setAutoGain(bool _autoGain) {
 	autoGain = _autoGain;
 
 	if (bGrabberInited) CLEyeSetCameraParameter(_cam, CLEYE_AUTO_GAIN,  (autoGain? 1 : 0));
-	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialed");
+	else ofLog(OF_LOG_WARNING, "ofxCLeye: Attempting to set property failed, grabber not initialised");
 }
 
 unsigned char* ofxCLeye::getPixels() { return pixels.getPixels(); }
@@ -259,7 +255,7 @@ bool ofxCLeye::setPixelFormat(ofPixelFormat fmt) {
 }
 
 ofPixelFormat ofxCLeye::getPixelFormat() {
-	return (colourMode == CLEYE_MONO_PROCESSED) ? OF_PIXELS_MONO : OF_PIXELS_RGBA;
+	return (colourMode == CLEYE_MONO_PROCESSED) ? OF_PIXELS_MONO : OF_PIXELS_RGB;
 }
 
 
@@ -274,20 +270,19 @@ void ofxCLeye::update() {
 		if (success) {
 			bIsFrameNew = true;
 
-			pixels.setFromPixels(viPixels, width, height, (colourMode == CLEYE_MONO_PROCESSED) ? 1 : 4);
-//			if (colourMode != CLEYE_MONO_PROCESSED) {
-//				for (int i=0; i<width*height; i++) {
-//					pixels[i*3+0] = viPixels[i*4+2];
-//					pixels[i*3+1] = viPixels[i*4+1];
-//					pixels[i*3+2] = viPixels[i*4+0];
-//				}
-//			}
+			if (colourMode == CLEYE_MONO_PROCESSED) {
+				pixels.setFromPixels(viPixels, width, height, (colourMode == CLEYE_MONO_PROCESSED) ? 1 : 4);
+			} else {
+				for (int i = 0; i < width * height; i++) {
+					pixels[i*3+0] = viPixels[i*4+2];
+					pixels[i*3+1] = viPixels[i*4+1];
+					pixels[i*3+2] = viPixels[i*4+0];
+				}
+			}
 
 			if (bUseTexture) {
 				tex.loadData(pixels.getPixels(), width, height,
-								(colourMode == CLEYE_MONO_PROCESSED) ? GL_LUMINANCE : GL_RGBA);
-//				if (colourMode == CLEYE_MONO_PROCESSED) tex.loadData(pixels, width, height, GL_LUMINANCE);
-//				else tex.loadData(pixels, width, height, GL_RGB);
+								(colourMode == CLEYE_MONO_PROCESSED) ? GL_LUMINANCE : GL_RGB);
 			}
 
 			if (bUseThread) unlock();
