@@ -31,6 +31,7 @@ public:
 	void			setGrayscale(bool _useGrayscale);
 	void			setUseThread(bool _useThread);
 	bool			initGrabber(int w, int h);
+	bool			isInitialized() const;
 
 	void			videoSettings();
 

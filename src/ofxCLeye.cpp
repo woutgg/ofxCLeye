@@ -171,6 +171,10 @@ bool ofxCLeye::initGrabber(int w, int h) {
 	}
 }
 
+bool ofxCLeye::isInitialized() const {
+	return bGrabberInited;
+}
+
 
 void ofxCLeye::videoSettings() {
 	ofLog(OF_LOG_WARNING, "ofxCLeye does not support videoSettings()");
